@@ -29,7 +29,21 @@
                 </div>
                 <span>Lead Scraper</span>
             </div>
-            <div class="header-badge">Google Maps Edition</div>
+            <div class="header-actions">
+                <button class="header-btn" id="historyBtn" title="Historial">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span class="badge" id="historyBadge">0</span>
+                </button>
+                <button class="header-btn" id="clearCacheBtn" title="Limpiar Cache de Duplicados">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content -->
@@ -38,10 +52,27 @@
             <section class="search-section" id="searchSection">
                 <div class="section-header">
                     <h1>Extrae Leads de Google Maps</h1>
-                    <p>Obtén información de contacto de negocios: teléfono, email, website y redes sociales</p>
+                    <p>Obtén información de contacto de negocios: teléfono, website y redes sociales</p>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="stats-bar" id="statsBar">
+                    <div class="stat-item">
+                        <span class="stat-icon">📊</span>
+                        <span class="stat-text"><strong id="totalScraped">0</strong> negocios scrapeados</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">🔄</span>
+                        <span class="stat-text"><strong id="totalSearches">0</strong> búsquedas realizadas</span>
+                    </div>
+                    <div class="stat-item skip-info">
+                        <span class="stat-icon">⏭️</span>
+                        <span class="stat-text">Los duplicados se saltan automáticamente</span>
+                    </div>
                 </div>
 
                 <form class="search-form" id="searchForm">
+                    <!-- Category Autocomplete -->
                     <div class="form-group">
                         <label for="category">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -52,21 +83,33 @@
                             </svg>
                             Categoría del Negocio
                         </label>
-                        <input type="text" id="category" name="category"
-                            placeholder="ej: plumber, dentist, restaurant, hairdressing..." required autocomplete="off">
-                        <div class="suggestions" id="categorySuggestions">
-                            <button type="button" data-value="plumber">🔧 Plumber</button>
-                            <button type="button" data-value="dentist">🦷 Dentist</button>
-                            <button type="button" data-value="restaurant">🍽️ Restaurant</button>
-                            <button type="button" data-value="contractor">🏗️ Contractor</button>
-                            <button type="button" data-value="hairdressing">💇 Hairdressing</button>
-                            <button type="button" data-value="lawyer">⚖️ Lawyer</button>
-                            <button type="button" data-value="gym">💪 Gym</button>
-                            <button type="button" data-value="real estate">🏠 Real Estate</button>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="category" name="category"
+                                placeholder="Escribe para buscar... (ej: plumber, dentist)" required autocomplete="off">
+                            <div class="autocomplete-dropdown" id="categoryDropdown"></div>
                         </div>
                     </div>
 
                     <div class="form-row">
+                        <!-- Country Autocomplete -->
+                        <div class="form-group">
+                            <label for="country">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M2 12h20" />
+                                    <path
+                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                </svg>
+                                País
+                            </label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="country" name="country" placeholder="Selecciona un país..."
+                                    required autocomplete="off">
+                                <div class="autocomplete-dropdown" id="countryDropdown"></div>
+                            </div>
+                        </div>
+
+                        <!-- City Autocomplete -->
                         <div class="form-group">
                             <label for="city">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -79,22 +122,11 @@
                                 </svg>
                                 Ciudad
                             </label>
-                            <input type="text" id="city" name="city" placeholder="ej: Buenos Aires, Miami, Madrid..."
-                                required autocomplete="off">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="country">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M2 12h20" />
-                                    <path
-                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                </svg>
-                                País
-                            </label>
-                            <input type="text" id="country" name="country" placeholder="ej: Argentina, USA, Spain..."
-                                required autocomplete="off">
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="city" name="city" placeholder="Primero selecciona un país..."
+                                    required autocomplete="off">
+                                <div class="autocomplete-dropdown" id="cityDropdown"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -136,6 +168,10 @@
                         <div class="stat">
                             <span class="stat-value" id="processed">0</span>
                             <span class="stat-label">Procesados</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="skipped">0</span>
+                            <span class="stat-label">Saltados</span>
                         </div>
                         <div class="stat">
                             <span class="stat-value" id="phase">-</span>
@@ -224,14 +260,28 @@
                     </button>
                 </div>
             </section>
+
+            <!-- History Modal -->
+            <div class="modal-overlay hidden" id="historyModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Historial de Búsquedas</h3>
+                        <button class="modal-close" id="closeHistoryModal">&times;</button>
+                    </div>
+                    <div class="modal-body" id="historyList">
+                        <!-- History items will be inserted here -->
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Lead Scraper © 2024 - Extracción de datos de Google Maps</p>
+            <p>Lead Scraper v2.0 - Extracción de datos de Google Maps</p>
         </footer>
     </div>
 
+    <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
 

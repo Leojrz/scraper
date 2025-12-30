@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increased limit for exclusion list
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Store for active jobs
@@ -18,14 +18,14 @@ const jobs = new Map();
 
 // Start scraping endpoint
 app.post('/api/scrape', async (req, res) => {
-    const { category, city, country } = req.body;
-    
+    const { category, city, country, exclusionList = [] } = req.body;
+
     if (!category || !city || !country) {
         return res.status(400).json({ error: 'Category, city, and country are required' });
     }
-    
+
     const jobId = uuidv4();
-    
+
     // Initialize job
     jobs.set(jobId, {
         status: 'running',
@@ -33,17 +33,19 @@ app.post('/api/scrape', async (req, res) => {
         totalFound: 0,
         currentBusiness: '',
         results: [],
+        skippedCount: 0,
         excelPath: null,
         error: null
     });
-    
+
     // Start scraping in background
     (async () => {
         try {
-            const results = await scrapeGoogleMaps(
+            const { results, skippedCount } = await scrapeGoogleMaps(
                 category,
                 city,
                 country,
+                exclusionList,
                 (progress) => {
                     const job = jobs.get(jobId);
                     if (job) {
@@ -51,16 +53,18 @@ app.post('/api/scrape', async (req, res) => {
                         job.totalFound = progress.totalFound;
                         job.currentBusiness = progress.currentBusiness || '';
                         job.phase = progress.phase || 'searching';
+                        job.skippedCount = progress.skippedCount || 0;
                     }
                 }
             );
-            
+
             const job = jobs.get(jobId);
             if (job) {
                 job.results = results;
+                job.skippedCount = skippedCount;
                 job.progress = 100;
                 job.status = 'generating_excel';
-                
+
                 // Generate Excel
                 const excelPath = await generateExcel(results, jobId, category, city, country);
                 job.excelPath = excelPath;
@@ -75,28 +79,28 @@ app.post('/api/scrape', async (req, res) => {
             }
         }
     })();
-    
+
     res.json({ jobId });
 });
 
 // Progress endpoint (Server-Sent Events)
 app.get('/api/progress/:jobId', (req, res) => {
     const { jobId } = req.params;
-    
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
+
     const sendProgress = () => {
         const job = jobs.get(jobId);
-        
+
         if (!job) {
             res.write(`data: ${JSON.stringify({ error: 'Job not found' })}\n\n`);
             res.end();
             return;
         }
-        
+
         res.write(`data: ${JSON.stringify({
             status: job.status,
             progress: job.progress,
@@ -104,19 +108,20 @@ app.get('/api/progress/:jobId', (req, res) => {
             currentBusiness: job.currentBusiness,
             phase: job.phase,
             resultsCount: job.results.length,
+            skippedCount: job.skippedCount,
             error: job.error
         })}\n\n`);
-        
+
         if (job.status === 'completed' || job.status === 'error') {
             res.end();
             return;
         }
-        
+
         setTimeout(sendProgress, 500);
     };
-    
+
     sendProgress();
-    
+
     req.on('close', () => {
         // Client disconnected
     });
@@ -126,15 +131,15 @@ app.get('/api/progress/:jobId', (req, res) => {
 app.get('/api/download/:jobId', (req, res) => {
     const { jobId } = req.params;
     const job = jobs.get(jobId);
-    
+
     if (!job) {
         return res.status(404).json({ error: 'Job not found' });
     }
-    
+
     if (job.status !== 'completed' || !job.excelPath) {
         return res.status(400).json({ error: 'Excel file not ready' });
     }
-    
+
     res.download(job.excelPath, `leads_${jobId.slice(0, 8)}.xlsx`, (err) => {
         if (err) {
             console.error('Download error:', err);
@@ -146,15 +151,16 @@ app.get('/api/download/:jobId', (req, res) => {
 app.get('/api/results/:jobId', (req, res) => {
     const { jobId } = req.params;
     const job = jobs.get(jobId);
-    
+
     if (!job) {
         return res.status(404).json({ error: 'Job not found' });
     }
-    
+
     res.json({
         status: job.status,
         results: job.results,
-        totalFound: job.totalFound
+        totalFound: job.totalFound,
+        skippedCount: job.skippedCount
     });
 });
 
@@ -165,5 +171,5 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
-    console.log(`📊 Google Maps Lead Scraper ready!`);
+    console.log(`📊 Google Maps Lead Scraper v2.0 ready!`);
 });

@@ -1,4 +1,4 @@
-// DOM Elements
+// ===== DOM Elements =====
 const searchSection = document.getElementById('searchSection');
 const progressSection = document.getElementById('progressSection');
 const resultsSection = document.getElementById('resultsSection');
@@ -16,6 +16,7 @@ const progressTitle = document.getElementById('progressTitle');
 const progressStatus = document.getElementById('progressStatus');
 const totalFoundEl = document.getElementById('totalFound');
 const processedEl = document.getElementById('processed');
+const skippedEl = document.getElementById('skipped');
 const phaseEl = document.getElementById('phase');
 const currentBusinessName = document.getElementById('currentBusinessName');
 
@@ -23,24 +24,296 @@ const resultsSummary = document.getElementById('resultsSummary');
 const resultsBody = document.getElementById('resultsBody');
 const errorMessage = document.getElementById('errorMessage');
 
-// State
+// Header buttons
+const historyBtn = document.getElementById('historyBtn');
+const clearCacheBtn = document.getElementById('clearCacheBtn');
+const historyBadge = document.getElementById('historyBadge');
+const historyModal = document.getElementById('historyModal');
+const closeHistoryModal = document.getElementById('closeHistoryModal');
+const historyList = document.getElementById('historyList');
+
+// Stats
+const totalScrapedEl = document.getElementById('totalScraped');
+const totalSearchesEl = document.getElementById('totalSearches');
+
+// Autocomplete elements
+const categoryInput = document.getElementById('category');
+const countryInput = document.getElementById('country');
+const cityInput = document.getElementById('city');
+const categoryDropdown = document.getElementById('categoryDropdown');
+const countryDropdown = document.getElementById('countryDropdown');
+const cityDropdown = document.getElementById('cityDropdown');
+
+// ===== State =====
 let currentJobId = null;
 let eventSource = null;
+let selectedCountry = null;
+let skippedCount = 0;
 
-// Category suggestions
-document.querySelectorAll('.suggestions button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.getElementById('category').value = btn.dataset.value;
-    });
+// ===== Local Storage Keys =====
+const STORAGE_KEYS = {
+    SCRAPED_BUSINESSES: 'leadScraper_scrapedBusinesses',
+    SEARCH_HISTORY: 'leadScraper_searchHistory',
+    STATS: 'leadScraper_stats'
+};
+
+// ===== Initialize =====
+document.addEventListener('DOMContentLoaded', () => {
+    initAutocomplete();
+    updateStats();
+    updateHistoryBadge();
 });
+
+// ===== Autocomplete System =====
+function initAutocomplete() {
+    // Category autocomplete
+    setupAutocomplete(categoryInput, categoryDropdown, () => {
+        return CATEGORIES.map(cat => ({
+            value: cat.value,
+            label: cat.label,
+            search: `${cat.value} ${cat.label} ${cat.es}`.toLowerCase()
+        }));
+    }, (item) => {
+        categoryInput.value = item.value;
+    });
+
+    // Country autocomplete
+    setupAutocomplete(countryInput, countryDropdown, () => {
+        return COUNTRIES.map(country => ({
+            value: country.value,
+            label: country.label,
+            count: country.cities.length,
+            search: `${country.value} ${country.label}`.toLowerCase()
+        }));
+    }, (item) => {
+        countryInput.value = item.value;
+        selectedCountry = COUNTRIES.find(c => c.value === item.value);
+        cityInput.placeholder = 'Escribe para buscar ciudades...';
+        cityInput.value = '';
+    });
+
+    // City autocomplete (depends on selected country)
+    setupAutocomplete(cityInput, cityDropdown, () => {
+        if (!selectedCountry) {
+            return [{ value: '', label: '⚠️ Primero selecciona un país', disabled: true }];
+        }
+        return selectedCountry.cities.map(city => ({
+            value: city,
+            label: city,
+            search: city.toLowerCase()
+        }));
+    }, (item) => {
+        if (!item.disabled) {
+            cityInput.value = item.value;
+        }
+    });
+}
+
+function setupAutocomplete(input, dropdown, getItems, onSelect) {
+    let selectedIndex = -1;
+    let items = [];
+
+    input.addEventListener('focus', () => {
+        showDropdown();
+    });
+
+    input.addEventListener('input', () => {
+        showDropdown();
+    });
+
+    input.addEventListener('blur', () => {
+        // Delay to allow click on dropdown item
+        setTimeout(() => {
+            dropdown.classList.remove('active');
+        }, 200);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (!dropdown.classList.contains('active')) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelection();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelection();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                selectItem(items[selectedIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            dropdown.classList.remove('active');
+        }
+    });
+
+    function showDropdown() {
+        items = getItems();
+        const query = input.value.toLowerCase();
+
+        // Filter items
+        const filtered = query
+            ? items.filter(item => item.search?.includes(query) || item.label.toLowerCase().includes(query))
+            : items;
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="autocomplete-empty">No se encontraron resultados</div>';
+        } else {
+            dropdown.innerHTML = filtered.slice(0, 20).map((item, index) => `
+                <div class="autocomplete-item ${item.disabled ? 'disabled' : ''}" data-index="${index}">
+                    <span class="item-label">${item.label}</span>
+                    ${item.count ? `<span class="item-count">${item.count} ciudades</span>` : ''}
+                </div>
+            `).join('');
+
+            // Add click handlers
+            dropdown.querySelectorAll('.autocomplete-item:not(.disabled)').forEach((el, idx) => {
+                el.addEventListener('click', () => {
+                    selectItem(filtered[idx]);
+                });
+            });
+        }
+
+        items = filtered;
+        selectedIndex = -1;
+        dropdown.classList.add('active');
+    }
+
+    function updateSelection() {
+        dropdown.querySelectorAll('.autocomplete-item').forEach((el, idx) => {
+            el.classList.toggle('selected', idx === selectedIndex);
+        });
+    }
+
+    function selectItem(item) {
+        onSelect(item);
+        dropdown.classList.remove('active');
+    }
+}
+
+// ===== Duplicate Prevention System =====
+function getScrapedBusinesses() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCRAPED_BUSINESSES)) || {};
+    } catch {
+        return {};
+    }
+}
+
+function saveScrapedBusinesses(businesses) {
+    localStorage.setItem(STORAGE_KEYS.SCRAPED_BUSINESSES, JSON.stringify(businesses));
+}
+
+function addScrapedBusiness(business) {
+    const scraped = getScrapedBusinesses();
+    const key = generateBusinessKey(business);
+    scraped[key] = {
+        name: business.name,
+        mapsLink: business.mapsLink,
+        scrapedAt: new Date().toISOString()
+    };
+    saveScrapedBusinesses(scraped);
+}
+
+function generateBusinessKey(business) {
+    // Use Maps link or name+address as unique key
+    if (business.mapsLink) {
+        return business.mapsLink;
+    }
+    return `${business.name}_${business.address}`.toLowerCase().replace(/\s+/g, '_');
+}
+
+function getExclusionList() {
+    const scraped = getScrapedBusinesses();
+    return Object.keys(scraped);
+}
+
+function clearScrapedBusinesses() {
+    if (confirm('¿Estás seguro? Esto eliminará el historial de negocios scrapeados y se podrán repetir en futuras búsquedas.')) {
+        localStorage.removeItem(STORAGE_KEYS.SCRAPED_BUSINESSES);
+        updateStats();
+        alert('Cache de duplicados limpiado correctamente');
+    }
+}
+
+// ===== Search History =====
+function getSearchHistory() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY)) || [];
+    } catch {
+        return [];
+    }
+}
+
+function addSearchToHistory(category, city, country, resultsCount) {
+    const history = getSearchHistory();
+    history.unshift({
+        category,
+        city,
+        country,
+        resultsCount,
+        date: new Date().toISOString()
+    });
+    // Keep only last 50 searches
+    localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(history.slice(0, 50)));
+    updateHistoryBadge();
+}
+
+function updateHistoryBadge() {
+    const history = getSearchHistory();
+    historyBadge.textContent = history.length;
+}
+
+function showHistory() {
+    const history = getSearchHistory();
+
+    if (history.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No hay búsquedas en el historial</div>';
+    } else {
+        historyList.innerHTML = history.map(item => `
+            <div class="history-item">
+                <div class="history-item-header">
+                    <span class="history-item-title">${item.category} en ${item.city}, ${item.country}</span>
+                    <span class="history-item-date">${new Date(item.date).toLocaleDateString('es-AR')}</span>
+                </div>
+                <div class="history-item-stats">
+                    <span>📊 ${item.resultsCount} negocios</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    historyModal.classList.remove('hidden');
+}
+
+// ===== Stats =====
+function updateStats() {
+    const scraped = getScrapedBusinesses();
+    const history = getSearchHistory();
+
+    totalScrapedEl.textContent = Object.keys(scraped).length;
+    totalSearchesEl.textContent = history.length;
+}
+
+// ===== Event Listeners =====
+
+// Header buttons
+historyBtn.addEventListener('click', showHistory);
+closeHistoryModal.addEventListener('click', () => historyModal.classList.add('hidden'));
+historyModal.addEventListener('click', (e) => {
+    if (e.target === historyModal) historyModal.classList.add('hidden');
+});
+clearCacheBtn.addEventListener('click', clearScrapedBusinesses);
 
 // Form submission
 searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const category = document.getElementById('category').value.trim();
-    const city = document.getElementById('city').value.trim();
-    const country = document.getElementById('country').value.trim();
+    const category = categoryInput.value.trim();
+    const city = cityInput.value.trim();
+    const country = countryInput.value.trim();
 
     if (!category || !city || !country) {
         alert('Por favor completa todos los campos');
@@ -54,16 +327,25 @@ searchForm.addEventListener('submit', async (e) => {
 async function startScraping(category, city, country) {
     try {
         submitBtn.disabled = true;
+        skippedCount = 0;
 
         // Show progress section
         showSection('progress');
         resetProgress();
 
+        // Get exclusion list
+        const exclusionList = getExclusionList();
+
         // Start the scraping job
         const response = await fetch('/api/scrape', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ category, city, country })
+            body: JSON.stringify({
+                category,
+                city,
+                country,
+                exclusionList: exclusionList
+            })
         });
 
         const data = await response.json();
@@ -75,7 +357,7 @@ async function startScraping(category, city, country) {
         currentJobId = data.jobId;
 
         // Connect to progress updates
-        connectToProgress(currentJobId);
+        connectToProgress(currentJobId, category, city, country);
 
     } catch (error) {
         console.error('Error:', error);
@@ -84,7 +366,7 @@ async function startScraping(category, city, country) {
 }
 
 // Connect to SSE for progress updates
-function connectToProgress(jobId) {
+function connectToProgress(jobId, category, city, country) {
     if (eventSource) {
         eventSource.close();
     }
@@ -104,7 +386,7 @@ function connectToProgress(jobId) {
 
         if (data.status === 'completed') {
             eventSource.close();
-            fetchResults(jobId);
+            fetchResults(jobId, category, city, country);
         } else if (data.status === 'error') {
             eventSource.close();
             showError(data.error || 'Error during scraping');
@@ -113,7 +395,6 @@ function connectToProgress(jobId) {
 
     eventSource.onerror = () => {
         eventSource.close();
-        // Don't show error immediately, might just be connection closed
     };
 }
 
@@ -125,15 +406,15 @@ function updateProgress(data) {
     progressPercent.textContent = `${percent}%`;
     totalFoundEl.textContent = data.totalFound || 0;
     processedEl.textContent = data.resultsCount || 0;
+    skippedEl.textContent = data.skippedCount || 0;
 
     // Phase translation
     const phases = {
         'loading': 'Cargando',
         'scrolling': 'Buscando',
         'extracting': 'Extrayendo',
-        'scraping_website': 'Analizando',
         'finishing': 'Finalizando',
-        'generating_excel': 'Generando Excel'
+        'generating_excel': 'Excel'
     };
     phaseEl.textContent = phases[data.phase] || data.phase || '-';
 
@@ -162,6 +443,7 @@ function resetProgress() {
     progressPercent.textContent = '0%';
     totalFoundEl.textContent = '0';
     processedEl.textContent = '0';
+    skippedEl.textContent = '0';
     phaseEl.textContent = '-';
     currentBusinessName.textContent = 'Preparando...';
     progressTitle.textContent = 'Buscando negocios...';
@@ -169,7 +451,7 @@ function resetProgress() {
 }
 
 // Fetch final results
-async function fetchResults(jobId) {
+async function fetchResults(jobId, category, city, country) {
     try {
         const response = await fetch(`/api/results/${jobId}`);
         const data = await response.json();
@@ -178,7 +460,17 @@ async function fetchResults(jobId) {
             throw new Error(data.error || 'Error fetching results');
         }
 
-        displayResults(data.results);
+        // Save results to prevent duplicates
+        data.results.forEach(business => addScrapedBusiness(business));
+
+        // Add to search history
+        addSearchToHistory(category, city, country, data.results.length);
+
+        // Update stats
+        updateStats();
+
+        // Display results
+        displayResults(data.results, data.skippedCount || 0);
 
     } catch (error) {
         console.error('Error fetching results:', error);
@@ -187,7 +479,7 @@ async function fetchResults(jobId) {
 }
 
 // Display results
-function displayResults(results) {
+function displayResults(results, skipped) {
     // Summary cards
     const withPhone = results.filter(r => r.phone).length;
     const withWebsite = results.filter(r => r.website).length;
@@ -196,7 +488,11 @@ function displayResults(results) {
     resultsSummary.innerHTML = `
         <div class="summary-card">
             <div class="value">${results.length}</div>
-            <div class="label">Total Negocios</div>
+            <div class="label">Nuevos Negocios</div>
+        </div>
+        <div class="summary-card">
+            <div class="value">${skipped}</div>
+            <div class="label">Saltados (duplicados)</div>
         </div>
         <div class="summary-card">
             <div class="value">${withPhone}</div>
@@ -295,6 +591,8 @@ downloadBtn.addEventListener('click', () => {
 newSearchBtn.addEventListener('click', () => {
     currentJobId = null;
     searchForm.reset();
+    selectedCountry = null;
+    cityInput.placeholder = 'Primero selecciona un país...';
     showSection('search');
 });
 

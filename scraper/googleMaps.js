@@ -5,12 +5,14 @@ const puppeteer = require('puppeteer');
  * @param {string} category - Business category (e.g., "plumber", "dentist")
  * @param {string} city - City name
  * @param {string} country - Country name
+ * @param {Array} exclusionList - List of business URLs/IDs to skip (already scraped)
  * @param {Function} onProgress - Progress callback
- * @returns {Promise<Array>} Array of business data
+ * @returns {Promise<Object>} Object with results array and skippedCount
  */
-async function scrapeGoogleMaps(category, city, country, onProgress) {
+async function scrapeGoogleMaps(category, city, country, exclusionList = [], onProgress) {
     const searchQuery = `${category} in ${city}, ${country}`;
     console.log(`🔍 Searching: ${searchQuery}`);
+    console.log(`📋 Exclusion list has ${exclusionList.length} items`);
 
     const browser = await puppeteer.launch({
         headless: 'new',
@@ -25,6 +27,10 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
     });
 
     const results = [];
+    let skippedCount = 0;
+
+    // Create a Set for faster lookup
+    const exclusionSet = new Set(exclusionList);
 
     try {
         const page = await browser.newPage();
@@ -38,7 +44,7 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
         await page.goto(mapsUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
         // Wait for results to load
-        await delay(3000);
+        await delay(2000);
 
         // Accept cookies if dialog appears
         try {
@@ -51,7 +57,7 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
             // Cookie dialog might not appear
         }
 
-        onProgress({ percent: 5, totalFound: 0, phase: 'loading', currentBusiness: 'Cargando resultados...' });
+        onProgress({ percent: 5, totalFound: 0, phase: 'loading', currentBusiness: 'Cargando resultados...', skippedCount: 0 });
 
         // Wait for the results panel
         await page.waitForSelector('[role="feed"]', { timeout: 30000 }).catch(() => null);
@@ -61,18 +67,33 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
         const businessLinks = await scrollAndCollectLinks(page, onProgress);
 
         console.log(`✅ Found ${businessLinks.length} businesses`);
-        onProgress({ percent: 30, totalFound: businessLinks.length, phase: 'extracting', currentBusiness: 'Extrayendo datos...' });
 
-        // Extract details for each business
-        for (let i = 0; i < businessLinks.length; i++) {
-            const link = businessLinks[i];
-            const progress = 30 + Math.floor((i / businessLinks.length) * 65);
+        // Filter out already scraped businesses
+        const newBusinessLinks = businessLinks.filter(link => !exclusionSet.has(link));
+        skippedCount = businessLinks.length - newBusinessLinks.length;
+
+        console.log(`⏭️ Skipping ${skippedCount} already scraped businesses`);
+        console.log(`🆕 Processing ${newBusinessLinks.length} new businesses`);
+
+        onProgress({
+            percent: 30,
+            totalFound: businessLinks.length,
+            phase: 'extracting',
+            currentBusiness: `Procesando ${newBusinessLinks.length} nuevos (${skippedCount} saltados)`,
+            skippedCount
+        });
+
+        // Extract details for each NEW business
+        for (let i = 0; i < newBusinessLinks.length; i++) {
+            const link = newBusinessLinks[i];
+            const progress = 30 + Math.floor((i / newBusinessLinks.length) * 65);
 
             onProgress({
                 percent: progress,
                 totalFound: businessLinks.length,
                 phase: 'extracting',
-                currentBusiness: `Procesando ${i + 1}/${businessLinks.length}`
+                currentBusiness: `Procesando ${i + 1}/${newBusinessLinks.length}`,
+                skippedCount
             });
 
             try {
@@ -86,11 +107,11 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
                 console.error(`  ✗ Error extracting business: ${error.message}`);
             }
 
-            // Short delay to avoid rate limiting
-            await delay(500 + Math.random() * 500);
+            // Reduced delay for faster processing
+            await delay(300 + Math.random() * 300);
         }
 
-        onProgress({ percent: 95, totalFound: results.length, phase: 'finishing', currentBusiness: 'Finalizando...' });
+        onProgress({ percent: 95, totalFound: businessLinks.length, phase: 'finishing', currentBusiness: 'Finalizando...', skippedCount });
 
     } catch (error) {
         console.error('Scraping error:', error);
@@ -99,7 +120,7 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
         await browser.close();
     }
 
-    return results;
+    return { results, skippedCount };
 }
 
 /**
@@ -124,7 +145,8 @@ async function scrollAndCollectLinks(page, onProgress) {
             percent: 5 + Math.min(25, Math.floor((attempt / maxScrollAttempts) * 25)),
             totalFound: links.size,
             phase: 'scrolling',
-            currentBusiness: `Encontrados: ${links.size} negocios`
+            currentBusiness: `Encontrados: ${links.size} negocios`,
+            skippedCount: 0
         });
 
         // Check if we got new results
@@ -147,7 +169,8 @@ async function scrollAndCollectLinks(page, onProgress) {
             }
         });
 
-        await delay(1500);
+        // Reduced delay for faster scrolling
+        await delay(1000);
 
         // Check for "end of list" indicator
         const endReached = await page.evaluate(() => {
@@ -171,8 +194,8 @@ async function scrollAndCollectLinks(page, onProgress) {
  */
 async function extractBusinessDetails(page, businessUrl) {
     try {
-        await page.goto(businessUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-        await delay(2000);
+        await page.goto(businessUrl, { waitUntil: 'networkidle2', timeout: 20000 });
+        await delay(1500);
 
         const data = await page.evaluate(() => {
             const result = {
