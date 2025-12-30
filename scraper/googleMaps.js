@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer');
-const { scrapeWebsite } = require('./websiteScraper');
 
 /**
  * Scrape businesses from Google Maps
@@ -67,7 +66,7 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
         // Extract details for each business
         for (let i = 0; i < businessLinks.length; i++) {
             const link = businessLinks[i];
-            const progress = 30 + Math.floor((i / businessLinks.length) * 60);
+            const progress = 30 + Math.floor((i / businessLinks.length) * 65);
 
             onProgress({
                 percent: progress,
@@ -80,22 +79,6 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
                 const businessData = await extractBusinessDetails(page, link);
 
                 if (businessData && businessData.name) {
-                    // Try to scrape website for email and social media
-                    if (businessData.website) {
-                        onProgress({
-                            percent: progress,
-                            totalFound: businessLinks.length,
-                            phase: 'scraping_website',
-                            currentBusiness: `Analizando website de ${businessData.name}`
-                        });
-
-                        const websiteData = await scrapeWebsite(businessData.website);
-                        businessData.email = websiteData.email || '';
-                        businessData.instagram = websiteData.instagram || '';
-                        businessData.facebook = websiteData.facebook || '';
-                        businessData.linkedin = websiteData.linkedin || '';
-                    }
-
                     results.push(businessData);
                     console.log(`  ✓ ${businessData.name}`);
                 }
@@ -103,8 +86,8 @@ async function scrapeGoogleMaps(category, city, country, onProgress) {
                 console.error(`  ✗ Error extracting business: ${error.message}`);
             }
 
-            // Random delay to avoid rate limiting
-            await delay(1000 + Math.random() * 2000);
+            // Short delay to avoid rate limiting
+            await delay(500 + Math.random() * 500);
         }
 
         onProgress({ percent: 95, totalFound: results.length, phase: 'finishing', currentBusiness: 'Finalizando...' });
@@ -184,7 +167,7 @@ async function scrollAndCollectLinks(page, onProgress) {
 }
 
 /**
- * Extract details from a business page
+ * Extract details from a business page (all data from Google Maps directly)
  */
 async function extractBusinessDetails(page, businessUrl) {
     try {
@@ -200,7 +183,12 @@ async function extractBusinessDetails(page, businessUrl) {
                 rating: '',
                 reviews: '',
                 category: '',
-                mapsLink: window.location.href
+                mapsLink: window.location.href,
+                instagram: '',
+                facebook: '',
+                linkedin: '',
+                twitter: '',
+                youtube: ''
             };
 
             // Name
@@ -287,6 +275,37 @@ async function extractBusinessDetails(page, businessUrl) {
                 const addressButton = document.querySelector('button[data-item-id*="address"]');
                 if (addressButton) {
                     result.address = addressButton.textContent?.trim() || '';
+                }
+            }
+
+            // Social Media Links - Extract from Google Maps directly
+            const allLinks = document.querySelectorAll('a[href]');
+            for (const link of allLinks) {
+                const href = link.href.toLowerCase();
+
+                // Instagram
+                if (href.includes('instagram.com/') && !result.instagram) {
+                    result.instagram = link.href;
+                }
+
+                // Facebook
+                if (href.includes('facebook.com/') && !href.includes('/sharer') && !result.facebook) {
+                    result.facebook = link.href;
+                }
+
+                // LinkedIn
+                if (href.includes('linkedin.com/') && !href.includes('/share') && !result.linkedin) {
+                    result.linkedin = link.href;
+                }
+
+                // Twitter/X
+                if ((href.includes('twitter.com/') || href.includes('x.com/')) && !href.includes('/share') && !result.twitter) {
+                    result.twitter = link.href;
+                }
+
+                // YouTube
+                if (href.includes('youtube.com/') && !result.youtube) {
+                    result.youtube = link.href;
                 }
             }
 

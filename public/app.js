@@ -142,7 +142,6 @@ function updateProgress(data) {
         'loading': 'Cargando resultados de Google Maps...',
         'scrolling': 'Buscando todos los negocios disponibles...',
         'extracting': 'Extrayendo información de cada negocio...',
-        'scraping_website': 'Analizando websites para emails y redes...',
         'finishing': 'Procesando datos finales...',
         'generating_excel': 'Generando archivo Excel...'
     };
@@ -191,9 +190,8 @@ async function fetchResults(jobId) {
 function displayResults(results) {
     // Summary cards
     const withPhone = results.filter(r => r.phone).length;
-    const withEmail = results.filter(r => r.email).length;
     const withWebsite = results.filter(r => r.website).length;
-    const withSocial = results.filter(r => r.instagram || r.facebook || r.linkedin).length;
+    const withSocial = results.filter(r => r.instagram || r.facebook || r.linkedin || r.twitter || r.youtube).length;
 
     resultsSummary.innerHTML = `
         <div class="summary-card">
@@ -203,10 +201,6 @@ function displayResults(results) {
         <div class="summary-card">
             <div class="value">${withPhone}</div>
             <div class="label">Con Teléfono</div>
-        </div>
-        <div class="summary-card">
-            <div class="value">${withEmail}</div>
-            <div class="label">Con Email</div>
         </div>
         <div class="summary-card">
             <div class="value">${withWebsite}</div>
@@ -227,7 +221,6 @@ function displayResults(results) {
                 ${business.address ? `<br><small style="color: var(--text-muted)">${escapeHtml(truncate(business.address, 50))}</small>` : ''}
             </td>
             <td>${business.phone ? `<a href="tel:${business.phone}">${escapeHtml(business.phone)}</a>` : '-'}</td>
-            <td>${business.email ? `<a href="mailto:${business.email}">${escapeHtml(business.email)}</a>` : '-'}</td>
             <td>${business.website ? `<a href="${business.website}" target="_blank" rel="noopener">Visitar</a>` : '-'}</td>
             <td>
                 <div class="social-links">
@@ -256,7 +249,22 @@ function displayResults(results) {
                             </svg>
                         </a>
                     ` : ''}
-                    ${!business.instagram && !business.facebook && !business.linkedin ? '-' : ''}
+                    ${business.twitter ? `
+                        <a href="${business.twitter}" target="_blank" rel="noopener" class="social-link twitter" title="Twitter">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                            </svg>
+                        </a>
+                    ` : ''}
+                    ${business.youtube ? `
+                        <a href="${business.youtube}" target="_blank" rel="noopener" class="social-link youtube" title="YouTube">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+                            </svg>
+                        </a>
+                    ` : ''}
+                    ${!business.instagram && !business.facebook && !business.linkedin && !business.twitter && !business.youtube ? '-' : ''}
                 </div>
             </td>
             <td>

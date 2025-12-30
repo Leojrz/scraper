@@ -25,7 +25,6 @@ async function generateExcel(data, jobId, category, city, country) {
         { header: '#', key: 'index', width: 5 },
         { header: 'Nombre', key: 'name', width: 35 },
         { header: 'Teléfono', key: 'phone', width: 20 },
-        { header: 'Email', key: 'email', width: 35 },
         { header: 'Website', key: 'website', width: 40 },
         { header: 'Dirección', key: 'address', width: 50 },
         { header: 'Rating', key: 'rating', width: 10 },
@@ -33,6 +32,8 @@ async function generateExcel(data, jobId, category, city, country) {
         { header: 'Instagram', key: 'instagram', width: 35 },
         { header: 'Facebook', key: 'facebook', width: 35 },
         { header: 'LinkedIn', key: 'linkedin', width: 35 },
+        { header: 'Twitter', key: 'twitter', width: 35 },
+        { header: 'YouTube', key: 'youtube', width: 35 },
         { header: 'Google Maps', key: 'mapsLink', width: 50 }
     ];
 
@@ -52,7 +53,6 @@ async function generateExcel(data, jobId, category, city, country) {
             index: index + 1,
             name: business.name || '',
             phone: business.phone || '',
-            email: business.email || '',
             website: business.website || '',
             address: business.address || '',
             rating: business.rating || '',
@@ -60,6 +60,8 @@ async function generateExcel(data, jobId, category, city, country) {
             instagram: business.instagram || '',
             facebook: business.facebook || '',
             linkedin: business.linkedin || '',
+            twitter: business.twitter || '',
+            youtube: business.youtube || '',
             mapsLink: business.mapsLink || ''
         });
 
@@ -94,6 +96,22 @@ async function generateExcel(data, jobId, category, city, country) {
                 hyperlink: business.linkedin
             };
             row.getCell('linkedin').font = { color: { argb: '0A66C2' }, underline: true };
+        }
+
+        if (business.twitter) {
+            row.getCell('twitter').value = {
+                text: business.twitter,
+                hyperlink: business.twitter
+            };
+            row.getCell('twitter').font = { color: { argb: '1DA1F2' }, underline: true };
+        }
+
+        if (business.youtube) {
+            row.getCell('youtube').value = {
+                text: business.youtube,
+                hyperlink: business.youtube
+            };
+            row.getCell('youtube').font = { color: { argb: 'FF0000' }, underline: true };
         }
 
         if (business.mapsLink) {
@@ -137,11 +155,12 @@ async function generateExcel(data, jobId, category, city, country) {
         { field: 'País', value: country },
         { field: 'Total Negocios', value: data.length },
         { field: 'Con Teléfono', value: data.filter(b => b.phone).length },
-        { field: 'Con Email', value: data.filter(b => b.email).length },
         { field: 'Con Website', value: data.filter(b => b.website).length },
         { field: 'Con Instagram', value: data.filter(b => b.instagram).length },
         { field: 'Con Facebook', value: data.filter(b => b.facebook).length },
         { field: 'Con LinkedIn', value: data.filter(b => b.linkedin).length },
+        { field: 'Con Twitter', value: data.filter(b => b.twitter).length },
+        { field: 'Con YouTube', value: data.filter(b => b.youtube).length },
         { field: 'Fecha de Extracción', value: new Date().toLocaleString('es-AR') }
     ];
 

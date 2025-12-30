@@ -1,27 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Scraper - Google Maps</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="app">
         <!-- Background Effects -->
         <div class="bg-gradient"></div>
         <div class="bg-grid"></div>
-        
+
         <!-- Header -->
         <header class="header">
             <div class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
                     </svg>
                 </div>
                 <span>Lead Scraper</span>
@@ -42,21 +45,15 @@
                     <div class="form-group">
                         <label for="category">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 7h-9"/>
-                                <path d="M14 17H5"/>
-                                <circle cx="17" cy="17" r="3"/>
-                                <circle cx="7" cy="7" r="3"/>
+                                <path d="M20 7h-9" />
+                                <path d="M14 17H5" />
+                                <circle cx="17" cy="17" r="3" />
+                                <circle cx="7" cy="7" r="3" />
                             </svg>
                             Categoría del Negocio
                         </label>
-                        <input 
-                            type="text" 
-                            id="category" 
-                            name="category" 
-                            placeholder="ej: plumber, dentist, restaurant, hairdressing..."
-                            required
-                            autocomplete="off"
-                        >
+                        <input type="text" id="category" name="category"
+                            placeholder="ej: plumber, dentist, restaurant, hairdressing..." required autocomplete="off">
                         <div class="suggestions" id="categorySuggestions">
                             <button type="button" data-value="plumber">🔧 Plumber</button>
                             <button type="button" data-value="dentist">🦷 Dentist</button>
@@ -73,49 +70,38 @@
                         <div class="form-group">
                             <label for="city">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 21h18"/>
-                                    <path d="M5 21V7l8-4v18"/>
-                                    <path d="M19 21V11l-6-4"/>
-                                    <path d="M9 9h.01"/>
-                                    <path d="M9 13h.01"/>
-                                    <path d="M9 17h.01"/>
+                                    <path d="M3 21h18" />
+                                    <path d="M5 21V7l8-4v18" />
+                                    <path d="M19 21V11l-6-4" />
+                                    <path d="M9 9h.01" />
+                                    <path d="M9 13h.01" />
+                                    <path d="M9 17h.01" />
                                 </svg>
                                 Ciudad
                             </label>
-                            <input 
-                                type="text" 
-                                id="city" 
-                                name="city" 
-                                placeholder="ej: Buenos Aires, Miami, Madrid..."
-                                required
-                                autocomplete="off"
-                            >
+                            <input type="text" id="city" name="city" placeholder="ej: Buenos Aires, Miami, Madrid..."
+                                required autocomplete="off">
                         </div>
 
                         <div class="form-group">
                             <label for="country">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M2 12h20"/>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M2 12h20" />
+                                    <path
+                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                                 </svg>
                                 País
                             </label>
-                            <input 
-                                type="text" 
-                                id="country" 
-                                name="country" 
-                                placeholder="ej: Argentina, USA, Spain..."
-                                required
-                                autocomplete="off"
-                            >
+                            <input type="text" id="country" name="country" placeholder="ej: Argentina, USA, Spain..."
+                                required autocomplete="off">
                         </div>
                     </div>
 
                     <button type="submit" class="submit-btn" id="submitBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/>
-                            <path d="m21 21-4.35-4.35"/>
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
                         </svg>
                         <span>Iniciar Scraping</span>
                     </button>
@@ -128,7 +114,7 @@
                     <div class="progress-header">
                         <div class="progress-icon spinning">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                             </svg>
                         </div>
                         <div class="progress-info">
@@ -169,16 +155,16 @@
                 <div class="results-header">
                     <div class="results-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
                         <h2>¡Scraping Completado!</h2>
                     </div>
                     <button class="download-btn" id="downloadBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
                         Descargar Excel
                     </button>
@@ -195,7 +181,6 @@
                                 <th>#</th>
                                 <th>Nombre</th>
                                 <th>Teléfono</th>
-                                <th>Email</th>
                                 <th>Website</th>
                                 <th>Redes Sociales</th>
                                 <th>Rating</th>
@@ -209,10 +194,10 @@
 
                 <button class="new-search-btn" id="newSearchBtn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                        <path d="M21 3v5h-5"/>
-                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                        <path d="M8 16H3v5"/>
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                        <path d="M21 3v5h-5" />
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                        <path d="M8 16H3v5" />
                     </svg>
                     Nueva Búsqueda
                 </button>
@@ -223,17 +208,17 @@
                 <div class="error-card">
                     <div class="error-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="8" x2="12" y2="12"/>
-                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
                         </svg>
                     </div>
                     <h2>Error en el Scraping</h2>
                     <p id="errorMessage">Ha ocurrido un error inesperado</p>
                     <button class="retry-btn" id="retryBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                            <path d="M21 3v5h-5"/>
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
                         </svg>
                         Intentar de Nuevo
                     </button>
@@ -249,4 +234,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
