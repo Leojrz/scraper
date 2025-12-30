@@ -1,0 +1,24 @@
+# Archivos y carpetas a ignorar
+
+# Dependencies
+node_modules/
+
+# Output files
+output/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Chrome data
+.puppeteer/
